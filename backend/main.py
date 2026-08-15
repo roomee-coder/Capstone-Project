@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 
 from algorithms import insertion_sort, binary_search, linear_search
+from quick_add import parse_task_description
 import models
 import schemas
 from database import engine, get_db
@@ -128,6 +129,35 @@ def create_task(task: schemas.TaskCreate, db: Session = Depends(get_db)):
 @app.get("/tasks", response_model=list[schemas.TaskOut])
 def list_tasks(db: Session = Depends(get_db)):
     return db.query(models.Task).all()
+
+@app.post("/tasks/quick-add", status_code=201)
+def quick_add_task(payload: dict, db: Session = Depends(get_db)):
+    description = payload.get("description")
+    project_id = payload.get("project_id")
+
+    if not description or not isinstance(description, str) or not description.strip():
+        raise HTTPException(status_code=422, detail="description is required and must be a non-empty string")
+
+    if project_id is None or not isinstance(project_id, int):
+        raise HTTPException(status_code=422, detail="project_id is required and must be an integer")
+
+    project = db.query(models.Project).filter(models.Project.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=422, detail="project_id does not reference an existing project")
+
+    parsed = parse_task_description(description)
+
+    new_task = models.Task(
+        title=parsed["title"],
+        priority=parsed["priority"],
+        due_date=parsed["due_date_hint"],
+        status="pending",
+        project_id=project_id,
+    )
+    db.add(new_task)
+    db.commit()
+    db.refresh(new_task)
+    return new_task
 
 # ==================== SORT & SEARCH (Section 2) ====================
 

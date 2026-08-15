@@ -30,3 +30,21 @@ A task management API built with FastAPI and SQLAlchemy.
 ### Is sorting-first worth it?
 
 Based on these numbers, sorting the task list before every search is **not** worth it for TaskFlow's actual usage pattern. At 3,000 tasks, insertion sort costs over 2.2 million comparisons — a cost paid on *every single sort request* — while binary search only saves roughly 111 comparisons over linear search (12 vs 123) once the list is already sorted. Given that TaskFlow users list and re-sort their tasks repeatedly throughout the day but add or rename tasks far less often, paying O(n²) to sort before every read is drastically more expensive than just linear-scanning an unsorted list each time. Sorting would only pay off if the list were sorted once and then searched many times *without* being re-sorted or re-fetched — which isn't how the sort endpoint is currently used, since it re-sorts from scratch on every call. A more efficient design would cache the sorted result or use a faster sort (e.g. one with O(n log n) worst case) if sorting-before-search became the dominant access pattern.
+
+## Section 3 — AI Quick-Add: Parser Design & Worked Examples
+
+### Prompting Technique Rationale
+
+The mock parser in `quick_add.py` is modeled on a **zero-shot, rule-based** approach rather than a few-shot or chain-of-thought prompting style, because the parsing task is fully deterministic and specified as an exact algorithm (fixed keyword lists, fixed matching order, fixed stripping rules) rather than an open-ended language understanding problem. A real LLM call using this design would use a single system-role instruction describing the parsing behavior precisely — priority keyword groups, the Monday-to-Sunday date-phrase check order, and the title-stripping steps — with the free-text description as the user-role message, and no worked examples embedded in the prompt itself. This keeps token usage minimal (one instruction, one input, no repeated example pairs) and maximizes reliability, since a rule-based system prompt removes ambiguity that few-shot examples would otherwise need to disambiguate through pattern-matching. Chain-of-thought prompting was intentionally avoided because it would introduce non-determinism: two runs of the same input could produce different intermediate reasoning and, potentially, different final output, which conflicts with the requirement that the mock and any real-LLM implementation produce identical results for identical input. The trade-off is that this approach is less flexible for descriptions using phrasing outside the fixed keyword set — for example, "critical" would not be recognized as high priority — but this is an acceptable trade-off for a task-creation shortcut that favors predictable, testable behavior over broader natural-language coverage.
+
+### Worked Examples
+
+| # | Input `description` | Parsed Output |
+|---|---|---|
+| 1 | `"This is urgent, mark it ASAP please"` | `{"title": "This is , mark it please", "priority": "high", "due_date_hint": null}` |
+| 2 | `"   "` (whitespace only) | `{"title": "Untitled task", "priority": "medium", "due_date_hint": null}` |
+| 3 | `"Finish the report next friday, it's urgent"` | `{"title": "Finish the report , it's", "priority": "high", "due_date_hint": "next friday"}` |
+| 4 | `"tomorrow review tomorrow"` | `{"title": "review", "priority": "medium", "due_date_hint": "tomorrow"}` |
+| 5 | `"Buy groceries whenever, no rush"` | `{"title": "Buy groceries , no rush", "priority": "low", "due_date_hint": null}` |
+
+All five examples were verified directly against the running `parse_task_description` function output (see terminal output in development log), not computed by hand separately.
