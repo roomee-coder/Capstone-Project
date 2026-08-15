@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TaskFlow</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <header class="app-header">
+    <h1>TaskFlow</h1>
+  </header>
+
+  <main class="app-main">
+    <section class="add-task-section">
+      <form id="task-form" class="task-form">
+        <div class="form-group">
+          <label for="task-title">Task Title</label>
+          <input type="text" id="task-title" name="title" placeholder="Enter task title" />
+          <span id="title-error" class="error-message"></span>
+        </div>
+
+        <div class="form-group">
+          <label for="task-due-date">Due Date</label>
+          <input type="text" id="task-due-date" name="dueDate" placeholder="e.g. next friday" />
+        </div>
+
+        <div class="form-group">
+          <label for="task-priority">Priority</label>
+          <select id="task-priority" name="priority">
+            <option value="low">Low</option>
+            <option value="medium" selected>Medium</option>
+            <option value="high">High</option>
+          </select>
+        </div>
+
+        <button type="submit">Add Task</button>
+      </form>
+    </section>
+
+    <section class="task-list-section">
+      <h2>Tasks</h2>
+      <div id="task-list" class="task-list"></div>
+    </section>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>
