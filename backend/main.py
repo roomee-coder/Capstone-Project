@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 
+from algorithms import insertion_sort, binary_search, linear_search
 import models
 import schemas
 from database import engine, get_db
@@ -128,6 +129,59 @@ def create_task(task: schemas.TaskCreate, db: Session = Depends(get_db)):
 def list_tasks(db: Session = Depends(get_db)):
     return db.query(models.Task).all()
 
+# ==================== SORT & SEARCH (Section 2) ====================
+
+PRIORITY_RANK = {"low": 1, "medium": 2, "high": 3}
+
+
+@app.get("/tasks/sort")
+def sort_tasks(sort: str = "priority", db: Session = Depends(get_db)):
+    all_tasks = db.query(models.Task).all()
+    task_dicts = [
+        {
+            "id": t.id,
+            "title": t.title,
+            "priority": t.priority,
+            "due_date": t.due_date,
+            "status": t.status,
+            "project_id": t.project_id,
+        }
+        for t in all_tasks
+    ]
+
+    if sort == "priority":
+        for task in task_dicts:
+            task["_rank"] = PRIORITY_RANK.get(task["priority"], 0)
+        insertion_sort(task_dicts, "_rank")
+        for task in task_dicts:
+            del task["_rank"]
+    elif sort == "due_date":
+        insertion_sort(task_dicts, "due_date")
+    else:
+        raise HTTPException(status_code=422, detail="sort must be 'priority' or 'due_date'")
+
+    return task_dicts
+
+
+@app.get("/tasks/search")
+def search_tasks(title: str, algo: str = "binary", db: Session = Depends(get_db)):
+    all_tasks = db.query(models.Task).all()
+    index = [{"id": t.id, "title": t.title} for t in all_tasks]
+
+    if algo == "binary":
+        insertion_sort(index, "title")
+        found_index = binary_search(index, title, "title")
+    elif algo == "linear":
+        found_index = linear_search(index, title, "title")
+    else:
+        raise HTTPException(status_code=422, detail="algo must be 'binary' or 'linear'")
+
+    if found_index == -1:
+        raise HTTPException(status_code=404, detail="No task found with that exact title")
+
+    matched_id = index[found_index]["id"]
+    task = db.query(models.Task).filter(models.Task.id == matched_id).first()
+    return task
 
 @app.get("/tasks/{task_id}", response_model=schemas.TaskOut)
 def get_task(task_id: int, db: Session = Depends(get_db)):
@@ -160,6 +214,7 @@ def delete_task(task_id: int, db: Session = Depends(get_db)):
     db.delete(task)
     db.commit()
     return {"message": "Task deleted successfully"}
+
 
 
 # ==================== ROOT ====================

@@ -1,0 +1,4 @@
+Size      Insertion Sort      Binary Search     Linear Search  
+10        15                  4                 9              
+500       61737               9                 123            
+3000      2223787             12                123            
