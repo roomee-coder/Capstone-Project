@@ -126,9 +126,7 @@ def create_task(task: schemas.TaskCreate, db: Session = Depends(get_db)):
     return db_task
 
 
-@app.get("/tasks", response_model=list[schemas.TaskOut])
-def list_tasks(db: Session = Depends(get_db)):
-    return db.query(models.Task).all()
+
 
 @app.post("/tasks/quick-add", status_code=201)
 def quick_add_task(payload: dict, db: Session = Depends(get_db)):
@@ -164,9 +162,13 @@ def quick_add_task(payload: dict, db: Session = Depends(get_db)):
 PRIORITY_RANK = {"low": 1, "medium": 2, "high": 3}
 
 
-@app.get("/tasks/sort")
-def sort_tasks(sort: str = "priority", db: Session = Depends(get_db)):
+@app.get("/tasks", response_model=None)
+def list_tasks(sort: str = None, db: Session = Depends(get_db)):
     all_tasks = db.query(models.Task).all()
+
+    if sort is None:
+        return all_tasks
+
     task_dicts = [
         {
             "id": t.id,
@@ -191,7 +193,6 @@ def sort_tasks(sort: str = "priority", db: Session = Depends(get_db)):
         raise HTTPException(status_code=422, detail="sort must be 'priority' or 'due_date'")
 
     return task_dicts
-
 
 @app.get("/tasks/search")
 def search_tasks(title: str, algo: str = "binary", db: Session = Depends(get_db)):
