@@ -33,8 +33,8 @@ async def log_requests(request, call_next):
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:5500",
-        "http://127.0.0.1:5500",
+        "http://localhost:8000",
+        "http://127.0.0.1:8000",
         "null",  # allows file:// origin during local testing
     ],
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
